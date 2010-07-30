@@ -1,20 +1,26 @@
 `svm.GetCVErr` <-
-function(.x, .fts, statevec,CVlist)
+function(.x, statevec,CVlist)
 {
-NumCVFold <- nrow(CVlist)
-NumStates <- length(unique(statevec))
+    NumCVFold <- nrow(CVlist)
+    NumStates <- length(unique(statevec))
 
-#cv.errors <- matrix(NA, NumCVFold,ncol(.x))
-#sample.errors <- matrix(NA, NumCVFold, nrow(.x))
+                                        #cv.errors <- matrix(NA, NumCVFold,ncol(.x))
+                                        #sample.errors <- matrix(NA, NumCVFold, nrow(.x))
 
-sample.errors.bycvfold <- array(data=NA, dim=c(ncol(.x),NumCVFold, nrow(.x)))
+    sample.errors.bycvfold <- array(data=NA, dim=c(ncol(.x),NumCVFold, nrow(.x)))
 
 
-NumStates <- length(unique(statevec))
-UStates <- unique(statevec)
-for (j in 1:NumCVFold){#print(j)
-indexout.j <- CVlist[j,]
-indexout.j <- indexout.j[!is.na(indexout.j)]
+    NumStates <- length(unique(statevec))
+    UStates <- unique(statevec)
+
+    cat("Number of CV fold to be run", NumCVFold, "\n")
+
+    for (j in 1:NumCVFold)
+    {
+        print(j)
+
+        indexout.j <- CVlist[j,]
+        indexout.j <- indexout.j[!is.na(indexout.j)]
 
 ### Defining the training and test data for the j-th CV step
 
@@ -26,10 +32,11 @@ y.out <- statevec[indexout.j]
 NumFtsI <- ncol(x.in)
 while(NumFtsI >= 2)
 {
+    cat("NumFtsI=",NumFtsI)
 mymtry <- round(NumFtsI^0.5)
 mydata.in  <- data.frame(y.in, x.in)
         RF1 <- randomForest(x =x.in, y = y.in, importance = TRUE, outscale = TRUE, mtry = mymtry, ntree = 500)
-SVM1 <- ksvm(y.in ~ ., data=mydata.in, type="C-bsvc", kernel="rbfdot", kpar="automatic", cross=4,prob.model=T)
+SVM1 <- ksvm(y.in ~ ., data=mydata.in, type="C-bsvc", kernel="rbfdot", kpar="automatic", cross=4,prob.model=TRUE)
 
 
 sample.errors.bycvfold[NumFtsI,j,indexout.j] <- as.character(predict(SVM1, x.out))
@@ -39,7 +46,7 @@ if (NumFtsI <= 2){NumFtsI<-1}
 if (NumFtsI > 2 & NumFtsI <=100){
    imp <- RF1$importance
    imp.dec.accuracy <- imp[,NumStates+1]
-   vars.order <- sort(imp.dec.accuracy,index.return=T)$ix
+   vars.order <- sort(imp.dec.accuracy,index.return=TRUE)$ix
    vars.keep <- vars.order[2:length(vars.order)]
 
   x.in <- x.in[,vars.keep]
@@ -50,7 +57,7 @@ if (NumFtsI > 2 & NumFtsI <=100){
 if (NumFtsI > 100){
    imp <- RF1$importance
    imp.dec.accuracy <- imp[,NumStates+1]
-  vars.order <- sort(imp.dec.accuracy,index.return=T)$ix
+  vars.order <- sort(imp.dec.accuracy,index.return=TRUE)$ix
    keep.percent <- round(0.1*NumFtsI)
    vars.keep <- vars.order[(keep.percent+1):length(vars.order)]
    x.in <- x.in[,vars.keep]
@@ -73,7 +80,7 @@ ErrorRates[i,,] <- t(results.i$CVErrRates)
 
 }
 
-        out <- apply(t(ErrorRates[,,1]),2,mean,na.rm=T)
+        out <- apply(t(ErrorRates[,,1]),2,mean,na.rm=TRUE)
 #out <- list(ErrorRates=ErrorRates)
 return(out)
 }
